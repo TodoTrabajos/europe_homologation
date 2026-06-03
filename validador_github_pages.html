@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de Certificado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md glass-card rounded-2xl shadow-xl overflow-hidden relative">
+        <div class="bg-[#0f172a] h-2 w-full absolute top-0 left-0"></div>
+        <div class="p-8">
+            <div class="flex items-center justify-center mb-6">
+                <!-- Icon or Logo -->
+                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
+                    <span class="material-symbols-outlined text-3xl">verified_user</span>
+                </div>
+            </div>
+            
+            <h2 class="text-xl font-bold text-slate-800 text-center mb-2">Validación de Certificado</h2>
+            <p class="text-sm text-slate-500 text-center mb-8">Comprobación de autenticidad y vigencia</p>
+            
+            <div id="status-container" class="rounded-xl p-4 mb-8 text-center border">
+                <div class="animate-pulse flex space-x-4 justify-center">
+                    <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex flex-col">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">RUC / Documento</span>
+                    <span id="doc" class="text-slate-800 font-semibold">-</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Razón Social</span>
+                    <span id="nombre" class="text-slate-800 font-semibold">-</span>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex flex-col flex-1">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Fecha Emisión</span>
+                        <span id="inicio" class="text-slate-800 font-semibold">-</span>
+                    </div>
+                    <div class="flex flex-col flex-1">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vencimiento</span>
+                        <span id="fin" class="text-slate-800 font-semibold">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-4 border-t border-slate-100 text-center">
+                <p class="text-[10px] text-slate-400">Verificado de forma segura vía Europe Homologation</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const hash = window.location.hash.substring(1); 
+        const statusContainer = document.getElementById('status-container');
+
+        if (hash) {
+            try {
+                const datosPuros = atob(hash); 
+                const [documento, nombre, fechaInicio, fechaFin] = datosPuros.split('|');
+
+                document.getElementById('doc').innerText = documento;
+                document.getElementById('nombre').innerText = nombre.replace(/_/g, ' ');
+                
+                // Format dates to DD/MM/YYYY
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return "-";
+                    const parts = dateStr.split('-');
+                    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+                };
+
+                document.getElementById('inicio').innerText = formatDate(fechaInicio);
+                document.getElementById('fin').innerText = formatDate(fechaFin);
+
+                const hoy = new Date();
+                hoy.setHours(0,0,0,0);
+                const vencimiento = new Date(fechaFin + "T00:00:00");
+                
+                const milisegundos = vencimiento.getTime() - hoy.getTime();
+                const diasRestantes = Math.ceil(milisegundos / (1000 * 60 * 60 * 24));
+
+                if (diasRestantes > 0) {
+                    statusContainer.className = "rounded-xl p-4 mb-8 text-center bg-emerald-50 border border-emerald-200 text-emerald-700";
+                    statusContainer.innerHTML = `<div class="flex items-center justify-center gap-2 mb-1"><span class="material-symbols-outlined text-xl">check_circle</span><span class="font-bold tracking-wide">CERTIFICADO VIGENTE</span></div><p class="text-xs opacity-90 font-medium">Válido por ${diasRestantes} días más</p>`;
+                } else if (diasRestantes === 0) {
+                    statusContainer.className = "rounded-xl p-4 mb-8 text-center bg-amber-50 border border-amber-200 text-amber-700";
+                    statusContainer.innerHTML = `<div class="flex items-center justify-center gap-2 mb-1"><span class="material-symbols-outlined text-xl">warning</span><span class="font-bold tracking-wide">EXPIRA HOY</span></div><p class="text-xs opacity-90 font-medium">Requiere renovación inmediata</p>`;
+                } else {
+                    statusContainer.className = "rounded-xl p-4 mb-8 text-center bg-rose-50 border border-rose-200 text-rose-700";
+                    statusContainer.innerHTML = `<div class="flex items-center justify-center gap-2 mb-1"><span class="material-symbols-outlined text-xl">cancel</span><span class="font-bold tracking-wide">CERTIFICADO VENCIDO</span></div><p class="text-xs opacity-90 font-medium">Expiró hace ${Math.abs(diasRestantes)} días</p>`;
+                }
+
+            } catch (e) {
+                statusContainer.className = "rounded-xl p-4 mb-8 text-center bg-rose-50 border border-rose-200 text-rose-700";
+                statusContainer.innerHTML = `<div class="flex items-center justify-center gap-2 mb-1"><span class="material-symbols-outlined text-xl">error</span><span class="font-bold">QR INVÁLIDO</span></div><p class="text-xs opacity-90">El código proporcionado no pudo ser verificado.</p>`;
+            }
+        } else {
+            statusContainer.className = "rounded-xl p-4 mb-8 text-center bg-slate-50 border border-slate-200 text-slate-500";
+            statusContainer.innerHTML = `<div class="flex items-center justify-center gap-2 mb-1"><span class="material-symbols-outlined text-xl">qr_code_scanner</span><span class="font-bold">ESPERANDO ESCANEO</span></div><p class="text-xs opacity-90">Por favor, escanea un código QR válido.</p>`;
+        }
+    </script>
+</body>
+</html>
